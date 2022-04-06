@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
 import pyvow.vow as vow
-import pickle
 import psutil
 import json
-import time
 import random
 import hashlib
-from math import sqrt, ceil
+from math import ceil
 from extract_stats import extract_stats
 
 GLOBALS = {
@@ -50,16 +48,16 @@ def memory(
 
     hansel_and_gretel = bool(max_crumbs > 0)
 
-    print "max_cpus =", max_cpus
-    print "min_nbits =", min_nbits
-    print "max_nbits =", max_nbits
+    print("max_cpus =", max_cpus)
+    print("min_nbits =", min_nbits)
+    print("max_nbits =", max_nbits)
     if iterations == 0:
-        print "iterations =", "ceil(2**16 / 2**memory_log_size)"
+        print("iterations =", "ceil(2**16 / 2**memory_log_size)")
     else:
-        print "iterations =", iterations
+        print("iterations =", iterations)
 
-    print "max_mem", max_mem
-    print "min_mem", min_mem
+    print("max_mem", max_mem)
+    print("min_mem", min_mem)
 
     # stats collector
     stats = vow.statistics_t()
@@ -83,14 +81,14 @@ def memory(
             S = vow.new_vow(t)
 
             for n_threads in range(min_cpus, min(GLOBALS["MAX_THREADS"], max_cpus)+1, step):
-                print "nbits_state %s memory_log_size %s threads %s h&g %s h&g max_crumbs %s full attack %s"%(
+                print("nbits_state %s memory_log_size %s threads %s h&g %s h&g max_crumbs %s full attack %s"%(
                     nbits_state,
                     memory_log_size,
                     n_threads,
                     hansel_and_gretel,
                     max_crumbs,
                     run_full_atk
-                )
+                ))
                 experiment = {
                     "total_number": 0,
                     "success": 0.,
@@ -134,14 +132,14 @@ def memory(
                 vow.set_max_function_versions(S, max_function_versions)
                 vow.set_collect_vow_stats(S, collect_vow_stats)
 
-                for iteration in range(1,iterations+1):
+                for _ in range(1,iterations+1):
                     vow.reset_vow(S)
 
                     # the way the threads pick seeds is sequential,
                     # so while we fix that we really want here
                     # to hash the seed itself between experiments
                     salt += 1
-                    derived_prng_seed = int(hashlib.sha256(str(prng_seed + salt)).hexdigest(), 16) % (2**64)
+                    derived_prng_seed = int(hashlib.sha256(bytes(prng_seed + salt)).hexdigest(), 16) % (2**64)
                     vow.set_prng_seed(S, derived_prng_seed)
                     vow.process_instance(S)
 
@@ -210,10 +208,10 @@ def memory(
                     "run_full_atk": run_full_atk
                 })
 
-                print >> f, json.dumps({
+                print(json.dumps({
                     'k': (nbits_state, memory_log_size, n_threads), 
                     'v': experiment
-                })
+                }), file=f)
             vow.delete_vow(S)
 
 
@@ -235,11 +233,11 @@ def main():
     parser.add_argument("-crumbs", type=int, default=0, help="number of H&G crumbs")
     args = parser.parse_args()
 
-    print "running full attack:", args.run_full_atk, "\n"
+    print("running full attack:", args.run_full_atk, "\n")
 
     if args.crumbs == 0:
         try:
-            print "classic vOW"
+            print("classic vOW")
             memory(
                 run_full_atk=args.run_full_atk,
                 max_crumbs=0,
@@ -255,13 +253,13 @@ def main():
                 server=args.server
             )
         except ValueError as e:
-            print e
-            print "Passing to next attack"
-            print
+            print(e)
+            print("Passing to next attack")
+            print()
 
         if not args.no_hag:
             try:
-                print "h&g"
+                print("h&g")
                 memory(
                     run_full_atk=args.run_full_atk,
                     max_crumbs=10,
@@ -277,12 +275,12 @@ def main():
                     server=args.server
                 )
             except ValueError as e:
-                print e
-                print "Passing to next attack"
-                print
+                print(e)
+                print("Passing to next attack")
+                print()
     else:
         try:
-            print "h&g"
+            print("h&g")
             memory(
                 run_full_atk=args.run_full_atk,
                 max_crumbs=args.crumbs,
@@ -298,9 +296,9 @@ def main():
                 server=args.server
             )
         except ValueError as e:
-            print e
-            print "Passing to next attack"
-            print
+            print(e)
+            print("Passing to next attack")
+            print()
 
 
 import __main__

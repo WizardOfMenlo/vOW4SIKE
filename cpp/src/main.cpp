@@ -88,7 +88,7 @@ int stats_vow(uint64_t n_cores, bool hansel_gretel, bool collect_stats, uint64_t
         inst_stats[i]->MAX_CRUMBS = max_crumbs;
         inst_stats[i]->process();
 
-        // derive sizes fro minstance
+        // derive sizes from instance
         typedef GenInstance Instance;
         typedef GenPoint Point;
         typedef LocalMemory<Point, Instance> Memory;
