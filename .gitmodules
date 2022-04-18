@@ -1,0 +1,3 @@
+[submodule "cpp/src/dependencies/PQCrypto-SIDH"]
+	path = cpp/src/dependencies/PQCrypto-SIDH
+	url = https://github.com/WizardOfMenlo/PQCrypto-SIDH/
