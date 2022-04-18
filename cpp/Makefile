@@ -20,6 +20,10 @@ SIDH_LIBDIR=$(SIDH_DIR)/lib217
 SIDH_TARGET=$(SIDH_LIBDIR)/libsidh.a
 LDFLAGS= -L$(SIDH_LIBDIR) -lsidh
 
+$(SIDH_TARGET):
+	cd $(SIDH_DIR) && make lib217
+#############
+
 _OBJ= \
 dependencies/aes/aes.o dependencies/aes/aes_ni.o \
 prng/xof.o \
@@ -48,10 +52,6 @@ OBJXX=$(patsubst %,$(OBJDIRXX)/%,$(_OBJXX))
 
 _BINXX=main
 BINXX=$(patsubst %,$(BINDIR)/%,$(_BINXX))
-
-$(SIDH_TARGET):
-	cd $(SIDH_DIR) && make lib217
-
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	mkdir -p `dirname $@`
