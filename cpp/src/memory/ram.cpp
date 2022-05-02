@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <iostream>
+#include <fstream>
 #include "../utils/memavail.h"
 #include "ram.hpp"
 
@@ -8,6 +9,11 @@ template <class Point, class Instance>
 LocalMemory<Point, Instance>::LocalMemory(uint64_t _max_entries, Instance *instance)
 {
     max_entries = _max_entries;
+    current_memory_filling = 0;
+    distinguished_points = 0;
+    dumped = false;
+    filename = std::string("memory_consumption_m=") + std::to_string(instance->MEMORY_LOG_SIZE) + "_n=" + std::to_string(instance->NBITS_STATE);
+    
 
     uint64_t total_cost = max_entries * (
         sizeof(Trip<Point, Instance> *)
@@ -100,12 +106,29 @@ bool LocalMemory<Point, Instance>::read(Trip<Point, Instance> **t, uint64_t addr
 template <class Point, class Instance>
 void LocalMemory<Point, Instance>::write(Trip<Point, Instance> *t, uint64_t address)
 {
+    #pragma omp critical
+    if (memory[address]->current_steps == 0) {
+        current_memory_filling++;
+
+        if (current_memory_filling == max_entries && !dumped) {
+            dumped = true;
+            std::cout << "Current Filling: (" << current_memory_filling << "\\" << max_entries << ") = " << ((double) current_memory_filling) / max_entries << " with " << distinguished_points << " dist points \n";
+            
+            std::ofstream out_file = std::ofstream(filename, std::ios::app);
+            
+            out_file << "Current Filling: (" << current_memory_filling << "\\" << max_entries << ") = " << ((double) current_memory_filling) / max_entries << " with " << distinguished_points << " dist points \n";
+        }
+    }
+
     memory[address]->from_trip(t);
 }
 
 template <class Point, class Instance>
 void LocalMemory<Point, Instance>::reset()
 {
+    current_memory_filling = 0;
+    distinguished_points = 0;
+    dumped = false;
     for (uint64_t i = 0; i < max_entries; i++)
     {
         memory[i]->reset();
@@ -115,6 +138,8 @@ void LocalMemory<Point, Instance>::reset()
 template <class Point, class Instance>
 Trip<Point, Instance> *LocalMemory<Point, Instance>::operator[](uint64_t i)
 {
+    distinguished_points++;
+
     return memory[i];
 }
 

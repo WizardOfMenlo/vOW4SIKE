@@ -107,7 +107,8 @@ def memory(
                     "hansel_and_gretel": hansel_and_gretel,
                     "max_crumbs": max_crumbs,
                     "full_data": [],
-                    "expected": {}
+                    "expected": {},
+                    "expected2021" : {}
                 }
 
                 # Average stats over runs depending on memory size

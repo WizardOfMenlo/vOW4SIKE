@@ -16,6 +16,10 @@ def extract_stats(experiment, params):
     exp_function_versions = 0.45 * n / w
     exp_distinguished_points = 4.5 * n
 
+    # (not)-experimental results in [TID21] 
+    # param on num of collisions
+    exp_i_21_f = lambda k: w/theta + (k - w*w/(2 * theta**2 * n)) * theta * n / w + 2 * k / theta
+
     experiment["expected"]["num_steps"] = exp_i
     experiment["expected"]["cycles"] = exp_i / m
     experiment["expected"]["wall_time"] = exp_i / m
@@ -31,6 +35,12 @@ def extract_stats(experiment, params):
     experiment["expected"]["ratio_num_steps"] = 1.
     experiment["expected"]["coll_per_fun"] = experiment["expected"]["collisions"] / experiment["expected"]["avg_random_functions"]
     experiment["expected"]["dist_cols_per_fun"] = experiment["expected"]["dist_cols"] / experiment["expected"]["avg_random_functions"]
+
+    experiment["expected2021"]["num_steps"] = exp_i_21_f(n/2)
+    experiment["expected2021"]["num_steps_second_model"] = exp_i_21_f(n/2)
+
+
+
     if not params["run_full_atk"]:
         # only one function
         experiment["expected"]["num_steps"] /= experiment["expected"]["avg_random_functions"]
@@ -41,6 +51,10 @@ def extract_stats(experiment, params):
         experiment["expected"]["dist_points"] /= experiment["expected"]["avg_random_functions"]
         experiment["expected"]["cycles"] /= experiment["expected"]["avg_random_functions"]
         experiment["expected"]["wall_time"] /= experiment["expected"]["avg_random_functions"]
+
+        experiment["expected2021"]["num_steps"] /= experiment["expected"]["avg_random_functions"]
+        experiment["expected2021"]["num_steps_from_collision"] = exp_i_21_f(experiment["collisions"])
+
         experiment["expected"]["avg_random_functions"] = 1
 
     if not params["run_full_atk"]:
@@ -49,9 +63,12 @@ def extract_stats(experiment, params):
         experiment["dist_cols_per_fun"] = experiment["dist_cols"]
         experiment["ratio_coll_per_fun"] = experiment["coll_per_fun"] / experiment["expected"]["coll_per_fun"]
         experiment["ratio_dist_cols_per_fun"] = experiment["dist_cols_per_fun"] / experiment["expected"]["dist_cols_per_fun"]
+        experiment["ratio_num_steps_2021_from_collisions"] = experiment["num_steps"] / experiment["expected2021"]["num_steps_from_collision"]
 
     # ratios wrt expected value
     experiment["ratio_avg_random_functions"] = experiment["avg_random_functions"] / experiment["expected"]["avg_random_functions"]
     experiment["ratio_num_steps"] = experiment["num_steps"] / experiment["expected"]["num_steps"]
     experiment["ratio_wall_time"] = experiment["wall_time"] / experiment["expected"]["wall_time"]
     experiment["ratio_cycles"] = experiment["cycles"] / experiment["expected"]["cycles"]
+
+    experiment["ratio_num_steps_2021"] = experiment["num_steps"] / experiment["expected2021"]["num_steps"]

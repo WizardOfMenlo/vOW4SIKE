@@ -14,6 +14,7 @@ OBJDIRXX=$(OBJDIRBASE)/cpp
 SRCDIR=./src
 BINDIR=./bin
 
+ifeq ("x", "y")
 ### SIDH ###
 SIDH_DIR=./src/dependencies/PQCrypto-SIDH
 SIDH_LIBDIR=$(SIDH_DIR)/lib217
@@ -23,6 +24,8 @@ LDFLAGS= -L$(SIDH_LIBDIR) -lsidh
 $(SIDH_TARGET):
 	cd $(SIDH_DIR) && make lib217
 #############
+endif
+
 
 _OBJ= \
 dependencies/aes/aes.o dependencies/aes/aes_ni.o \
@@ -61,7 +64,7 @@ $(OBJDIRXX)/%.o: $(SRCDIR)/%.cpp
 	mkdir -p `dirname $@`
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
 
-$(BINDIR)/%: $(BIN) $(OBJ) $(OBJXX) $(SIDH_TARGET)
+$(BINDIR)/%: $(BIN) $(OBJ) $(OBJXX) #$(SIDH_TARGET)
 	mkdir -p `dirname $@`
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
 
@@ -82,6 +85,6 @@ clean:
 	rm -rf $(OBJDIRBASE)
 	rm -rf $(BINDIR)
 	rm -rf swig/vow_wrap.c swig/vow_wrap.cxx pyvow python/pyvow
-	cd $(SIDH_DIR) && make clean
+	#cd $(SIDH_DIR) && make clean
 
 
