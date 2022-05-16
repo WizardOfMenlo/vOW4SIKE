@@ -66,3 +66,6 @@ Visual Studio/SIDH/.vs/SIDH/v14/.suo
 # Vscode
 .vscode/
 compile_commands.json
+
+# Python
+__pycache__/
