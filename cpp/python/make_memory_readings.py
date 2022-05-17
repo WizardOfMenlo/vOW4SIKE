@@ -6,6 +6,8 @@ import json
 from joblib import Parallel, delayed
 from itertools import product
 
+# TODO: Build using the new MEMORY_FILLING_INSTR to enable that instrumentation
+
 def expected_points_to_fill(log_n: int, log_w: int, theta: float) -> float:
       res = 0
       n = 2**log_n

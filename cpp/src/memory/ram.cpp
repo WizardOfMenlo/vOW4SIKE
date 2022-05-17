@@ -8,11 +8,13 @@
 template <class Point, class Instance>
 LocalMemory<Point, Instance>::LocalMemory(uint64_t _max_entries, Instance *instance)
 {
+    #ifdef MEMORY_FILLING_INSTR
     max_entries = _max_entries;
     current_memory_filling = 0;
     distinguished_points = 0;
     dumped = false;
     filename = std::string("memory_consumption_m=") + std::to_string(instance->MEMORY_LOG_SIZE) + "_n=" + std::to_string(instance->NBITS_STATE);
+    #endif
     
 
     uint64_t total_cost = max_entries * (
@@ -106,6 +108,7 @@ bool LocalMemory<Point, Instance>::read(Trip<Point, Instance> **t, uint64_t addr
 template <class Point, class Instance>
 void LocalMemory<Point, Instance>::write(Trip<Point, Instance> *t, uint64_t address)
 {
+    #ifdef MEMORY_FILLING_INSTR
     #pragma omp critical
     if (memory[address]->current_steps == 0) {
         current_memory_filling++;
@@ -119,6 +122,7 @@ void LocalMemory<Point, Instance>::write(Trip<Point, Instance> *t, uint64_t addr
             out_file << "Current Filling: (" << current_memory_filling << "\\" << max_entries << ") = " << ((double) current_memory_filling) / max_entries << " with " << distinguished_points << " dist points \n";
         }
     }
+    #endif
 
     memory[address]->from_trip(t);
 }
@@ -126,9 +130,12 @@ void LocalMemory<Point, Instance>::write(Trip<Point, Instance> *t, uint64_t addr
 template <class Point, class Instance>
 void LocalMemory<Point, Instance>::reset()
 {
+    #ifdef MEMORY_FILLING_INSTR
     current_memory_filling = 0;
     distinguished_points = 0;
     dumped = false;
+    #endif
+
     for (uint64_t i = 0; i < max_entries; i++)
     {
         memory[i]->reset();
@@ -138,7 +145,9 @@ void LocalMemory<Point, Instance>::reset()
 template <class Point, class Instance>
 Trip<Point, Instance> *LocalMemory<Point, Instance>::operator[](uint64_t i)
 {
+    #ifdef MEMORY_FILLING_INSTR
     distinguished_points++;
+    #endif
 
     return memory[i];
 }
