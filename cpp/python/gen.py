@@ -5,14 +5,14 @@ import psutil
 import json
 import random
 import hashlib
-from math import ceil
+from math import ceil, floor
 from extract_stats import extract_stats
 
 GLOBALS = {
     "ALPHA": 2.25,
     "BETA": 10.0,
     "GAMMA": 20.0,
-    "MAX_THREADS": psutil.cpu_count(logical=False), # logical=True includes HT, logical=False excludes it
+    "MAX_THREADS": floor(psutil.cpu_count(logical=False) * 1.4), # logical=True includes HT, logical=False excludes it
 }
 
 
