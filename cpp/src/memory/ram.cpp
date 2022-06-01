@@ -9,14 +9,13 @@ template <class Point, class Instance>
 LocalMemory<Point, Instance>::LocalMemory(uint64_t _max_entries, Instance *instance)
 {
     #ifdef MEMORY_FILLING_INSTR
-    max_entries = _max_entries;
     current_memory_filling = 0;
     distinguished_points = 0;
     dumped = false;
     filename = std::string("memory_consumption_m=") + std::to_string(instance->MEMORY_LOG_SIZE) + "_n=" + std::to_string(instance->NBITS_STATE);
     #endif
     
-
+    max_entries = _max_entries;
     uint64_t total_cost = max_entries * (
         sizeof(Trip<Point, Instance> *)
         + sizeof(Trip<Point, Instance>)
