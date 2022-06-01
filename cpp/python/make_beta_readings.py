@@ -49,7 +49,7 @@ for n, w, ITERS in experiments:
             for i in range(ITERS):
                 seed = int.from_bytes(hashlib.shake_128('_'.join(str(x) for x in [n, w, beta, i]).encode()).digest(7), 'big') + 1
                 subprocess.run(
-                    f"python gen.py -seed {seed} -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -min_beta {beta} -max_beta {beta} -no_hag -run_full_atk".split(' '))
+                    f"python3 gen.py -seed {seed} -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -min_beta {beta} -max_beta {beta} -no_hag -run_full_atk".split(' '))
 
 # Once we are done parse the resulting
 aggregated_res = {}
