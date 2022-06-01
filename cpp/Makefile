@@ -74,9 +74,9 @@ swig: $(OBJ) $(OBJXX)
 	mkdir -p pyvow
 	mkdir -p $(OBJDIRXX)
 	swig -Wall -Wextra -c++ -python -threads -outdir pyvow swig/vow.i
-	$(CXX) $(CXXFLAGS) -c swig/vow_wrap.cxx -I/usr/include/python3.10 -o $(OBJDIRXX)/vow_wrap.o -fPIC
+	$(CXX) $(CXXFLAGS) -c swig/vow_wrap.cxx -I/usr/include/python3.9 -o $(OBJDIRXX)/vow_wrap.o -fPIC
 	rm swig/vow_wrap.cxx
-	$(CXX) $(CXXFLAGS) -I/usr/include/python3.10 $^ $(OBJDIRXX)/vow_wrap.o -o pyvow/_vow.so -shared
+	$(CXX) $(CXXFLAGS) -I/usr/include/python3.9 $^ $(OBJDIRXX)/vow_wrap.o -o pyvow/_vow.so -shared
 	touch pyvow/__init__.py
 	rm -f python/pyvow
 	ln -rs pyvow python/pyvow
