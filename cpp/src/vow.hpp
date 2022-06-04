@@ -22,6 +22,8 @@ class vOW
         bool backtrack(Trip<Point, Instance> &c0, Trip<Point, Instance> &c1, private_state_t<Point, PRNG, RandomFunction, Instance> &private_state);
         void benchmark(uint64_t target_number_of_points);
 
+        bool on_triple_memory_hit(private_state_t<Point, PRNG, RandomFunction, Instance> &private_state, Trip<Point, Instance> &t, Trip<Point, Instance>* read_triple_ptr);
+
     public:
         // settings
         Instance *instance;

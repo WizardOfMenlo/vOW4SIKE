@@ -91,64 +91,25 @@ LocalMemory<Point, Instance>::~LocalMemory()
     free(memory);
 }
 
-/*
-* Reads triple from memory at specified address.
-* If no triple is found there, returns false, else true.
-*/
 template <class Point, class Instance>
-bool LocalMemory<Point, Instance>::read(Trip<Point, Instance> **t, uint64_t address) //note: may want to use a reference
+bool LocalMemory<Point, Instance>::send_point(Trip<Point, Instance> *t, uint64_t address, Trip<Point, Instance>* read_ptr)
 {
-    // note: passing pointers rather than copying
-    *t = memory[address];
-    return (*t)->current_steps > 0; // if no steps, then memory location was empty
-}
+    // Read into the ptr that we have been given
+    read_ptr->from_trip(memory[address]);
 
-
-template <class Point, class Instance>
-void LocalMemory<Point, Instance>::write(Trip<Point, Instance> *t, uint64_t address)
-{
-    #ifdef MEMORY_FILLING_INSTR
-    #pragma omp critical
-    if (memory[address]->current_steps == 0) {
-        current_memory_filling++;
-
-        if (current_memory_filling == max_entries && !dumped) {
-            dumped = true;
-            std::cout << "Current Filling: (" << current_memory_filling << "\\" << max_entries << ") = " << ((double) current_memory_filling) / max_entries << " with " << distinguished_points << " dist points \n";
-            
-            std::ofstream out_file = std::ofstream(filename, std::ios::app);
-            
-            out_file << "Current Filling: (" << current_memory_filling << "\\" << max_entries << ") = " << ((double) current_memory_filling) / max_entries << " with " << distinguished_points << " dist points \n";
-        }
-    }
-    #endif
-
+    // Write the final point
     memory[address]->from_trip(t);
+
+    return true;
 }
 
 template <class Point, class Instance>
 void LocalMemory<Point, Instance>::reset()
 {
-    #ifdef MEMORY_FILLING_INSTR
-    current_memory_filling = 0;
-    distinguished_points = 0;
-    dumped = false;
-    #endif
-
     for (uint64_t i = 0; i < max_entries; i++)
     {
         memory[i]->reset();
     }
-}
-
-template <class Point, class Instance>
-Trip<Point, Instance> *LocalMemory<Point, Instance>::operator[](uint64_t i)
-{
-    #ifdef MEMORY_FILLING_INSTR
-    distinguished_points++;
-    #endif
-
-    return memory[i];
 }
 
 // template

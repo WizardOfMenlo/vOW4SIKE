@@ -313,7 +313,6 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::step(private_state_t<Po
     }
 }
 
-
 /**
  * @brief runs one "iteration" of vOW: sampling a point, checking for distiniguishedness and possibly backtracking
  *
@@ -354,38 +353,36 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::iteration(
 
         id = private_state.current->current_state->mem_index(private_state.random_functions);
 
-        private_state.trip->from_trip((*memory)[id]);
-        read = (private_state.trip->current_steps > 0); // if == 0, the mem location was empty
+        // Writes a point to remote memory, and, if on local, do the usual checks for backtracking
+        bool local = memory->send_point(private_state.current, id, private_state.trip);
 
-        // private_state.current->current_state->print(); printf("  ");
-        // private_state.trip->current_state->print();
-        // printf("\t==: %d\n", (int)(*(private_state.trip->current_state) == *(private_state.current->current_state)));
+        if (local) {
+            read = (private_state.trip->current_steps > 0); // if == 0, the mem location was empty
 
-        // did not get a collision in value, hence it was just a memory address collision
-        if (!read || *(private_state.trip->current_state) != *(private_state.current->current_state))
-        {
-            private_state.mem_collisions += (int)(read);
-        }
-        else
-        {
-            // not a simple memory collision, backtrack!
-            t.from_trip(private_state.current);
-            res = backtrack(*private_state.trip, t, private_state);
-
-            // we only check for success when not running for stats
-            if (!private_state.collect_vow_stats)
+            // did not get a collision in value, hence it was just a memory address collision
+            if (!read || *(private_state.trip->current_state) != *(private_state.current->current_state))
             {
-                if (res || success)
+                private_state.mem_collisions += (int)(read);
+            }
+            else
+            {
+                // not a simple memory collision, backtrack!
+                t.from_trip(private_state.current);
+                res = backtrack(*private_state.trip, t, private_state);
+
+                // we only check for success when not running for stats
+                if (!private_state.collect_vow_stats)
                 {
-                    success = true;
-                    // printf("\n%d: success", private_state->thread_id);
-                    return true;
+                    if (res || success)
+                    {
+                        success = true;
+                        // printf("\n%d: success", private_state->thread_id);
+                        return true;
+                    }
                 }
             }
         }
 
-        // we didn't get the golden collision, write the current distinguished point to memory
-        memory->write(private_state.current, id);
         // and sample a new starting point
         private_state.current->sample(private_state.prng);
         if (instance->HANSEL_GRETEL)
