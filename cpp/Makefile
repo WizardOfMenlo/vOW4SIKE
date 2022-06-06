@@ -50,6 +50,7 @@ benchmarking.o \
 vow.o \
 swig_helpers.o \
 utils/bintree.o \
+utils/busy_wait.o \
 main.o
 OBJXX=$(patsubst %,$(OBJDIRXX)/%,$(_OBJXX))
 
