@@ -4,6 +4,8 @@
 #include "../settings.h"
 #include "../prng/xof.h"
 #include "../utils/fix_overflow.h"
+#include "../utils/busy_wait.hpp"
+#include "../utils/cycles.h"
 
 template <class Point>
 GenRandomFunction<Point>::GenRandomFunction(GenInstance *instance)
@@ -56,7 +58,12 @@ void GenRandomFunction<Point>::update()
 template <class Point>
 void GenRandomFunction<Point>::eval(Point &out, Point &in)
 {
-
+    // Approximately 1 million cycles
+    //int64_t start = cpu_cycles();
+    busy_wait(MILLION_CYCLES);
+    //int64_t end = cpu_cycles();
+    //printf("%ld\n", end - start);
+    //printf("%f\n", (end - start)/((double) 1000000));
     if (in == *preimages[0] || in == *preimages[1])
     {
         out.from_point(*image);
