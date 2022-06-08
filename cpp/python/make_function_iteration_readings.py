@@ -9,9 +9,9 @@ import math
 
 experiments = [ (24, 17), (24, 16) ]
 
-ncpus = min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 1
+ncpus = 16 #min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 1
 
-ITERS = 1000
+ITERS = 100
 
 # We have set the cycles for function iterations to be ~ 1 million cycles. 
 # We want to verify that a function iterations that computes that many points incurs in the appropriate slowdown
@@ -33,6 +33,7 @@ for n, w in experiments:
 
 print('Total: ', total_time)
 
+exit()
 
 for n, w in experiments:
    subprocess.run(f"python gen.py -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -no_hag -iterations {ITERS}".split(' '))
