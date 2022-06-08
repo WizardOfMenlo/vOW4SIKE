@@ -3,15 +3,32 @@ import json
 import hashlib
 import psutil
 import math
+import http.client, urllib
+
+def send_notification(text):
+    try:
+        conn = http.client.HTTPSConnection("api.pushover.net:443")
+        conn.request("POST", "/1/messages.json",
+                  urllib.parse.urlencode({
+                          "token": "axy8cncqxfnmqddtqm7v5cj8aj5wyz",
+                           "user": "u2yicb2qtwrzwkcz1ktwzd117jb8g1",
+                           "message": text,
+                           }),
+                  { "Content-type": "application/x-www-form-urlencoded" }
+                  )
+        conn.getresponse()
+    except:
+        pass
 
 
 experiments = [
             
             # Should take ~ 3m * 50 = 2.5h x 7 ~ 18 h * 7 ~ 5 days
-            (24, 12, 50), (24, 13, 50), (24, 14, 50), (24, 16, 50), (24, 17, 50), (24, 19, 50), (24, 20, 50),
+            #(24, 12, 50), (24, 13, 50), (24, 14, 50), (24, 16, 50), (24, 17, 50), (24, 19, 50), (24, 20, 50),
 
             # Should take ~ 2m * 50 ~ 1.6 h x 3 ~ 5h * 7 ~ 1.5 days
-            (32, 22, 50), (32, 23, 50), (32, 26, 50),
+            #(32, 22, 50), 
+            (32, 23, 50), (32, 26, 50),
             
             # vow original (should we include this?)
             #(32, 10, 50),
@@ -35,6 +52,7 @@ print('Welcome! Will be running the following experiments: ')
 print(experiments)
 print(f'We will be using {ncpus}')
 print('Sit back and enjoy the ride!')
+send_notification('Started Experiments')
 
 def range_of_betas(log_w: int) -> list[int]:
     possible_optimal = round(math.log(2**log_w))
@@ -45,12 +63,16 @@ for n, w, ITERS in experiments:
         # Skip since else we complain
         if n <= w:
             continue
+        send_notification(f'Started runs for n:= {n}, w := {w}')
         for beta in range_of_betas(w):
             for i in range(ITERS):
-                seed = int.from_bytes(hashlib.shake_128('_'.join(str(x) for x in [n, w, beta, i]).encode()).digest(7), 'big') + 1
+                seed = (int.from_bytes(hashlib.shake_128('_'.join(str(x) for x in [n, w, beta, i]).encode()).digest(7), 'big')  % 2**24) + 1
+                print(f'python3 gen.py -seed {seed} -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -min_beta {beta} -max_beta {beta} -no_hag -run_full_atk')
                 subprocess.run(
                     f"python3 gen.py -seed {seed} -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -min_beta {beta} -max_beta {beta} -no_hag -run_full_atk".split(' '))
 
+
+send_notification('We are done!')
 # Once we are done parse the resulting
 aggregated_res = {}
 with open('gen_full_atk_True_hag_False', 'r') as f:
