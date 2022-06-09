@@ -9,9 +9,9 @@ import math
 
 experiments = [ (24, 17), (24, 16) ]
 
-ncpus = 16 #min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 1
+ncpus = 16 # min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 1
 
-ITERS = 100
+ITERS = 10
 
 # We have set the cycles for function iterations to be ~ 1 million cycles. 
 # We want to verify that a function iterations that computes that many points incurs in the appropriate slowdown
@@ -20,8 +20,16 @@ def predicted_time(log_n, log_w):
     inv_theta = 1/(2.25 * math.sqrt(2**(log_w - log_n)))
     return ITERS * (inv_theta * 10**6 * 10 * 2**log_w / (4 * 10**9 * ncpus)) / 3600
 
-def predicted_cycles(num_steps):
-    return num_steps * 10**6 / ncpus
+def predicted_cycles(num_steps, calibrated_cycles):
+    return num_steps * calibrated_cycles / ncpus
+
+def parse_cycles(ls: str):
+    for l in ls.splitlines():
+        if l.strip().startswith('Benched'):
+            return int(l.strip().split(':')[1])
+
+    raise ValueError('What')
+
 
 total_time = 0
 for n, w in experiments:
@@ -33,10 +41,14 @@ for n, w in experiments:
 
 print('Total: ', total_time)
 
-exit()
+calibrated_cycles = {}
 
 for n, w in experiments:
-   subprocess.run(f"python gen.py -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -no_hag -iterations {ITERS}".split(' '))
+   cmd_run = subprocess.run(f"python gen.py -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -no_hag -iterations {ITERS}".split(' '), capture_output=True, text=True)
+   cycles_parsed = parse_cycles(cmd_run.stdout)
+   calibrated_cycles[str(n) + '_' + str(w)] = cycles_parsed
+   
+   
 
 aggregated_res = {}
 with open('gen_full_atk_False_hag_False') as f:
@@ -47,8 +59,8 @@ with open('gen_full_atk_False_hag_False') as f:
         num_steps = d['v']['num_steps']
         # Cycles are wall time cycles
         cycles = d['v']['cycles']
-        exp_cycles = predicted_cycles(num_steps)
         key = str(nbits_state)+'_'+str(memory_log_size)
+        exp_cycles = predicted_cycles(num_steps, calibrated_cycles[key])
 
         aggregated_res[key] = { 'n' : nbits_state, 'w': memory_log_size, 'num_steps': num_steps, 'cycles': cycles, 'exp_cycles': exp_cycles,
                 'ratio': cycles/exp_cycles }

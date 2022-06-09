@@ -16,6 +16,7 @@ extern "C"
 #include "types/triples.hpp"
 #include "utils/bintree.hpp"
 #include "utils/buftools.h"
+#include "utils/busy_wait.hpp"
 #include "vow.hpp"
 
 
@@ -622,6 +623,15 @@ vOW<Point, Memory, RandomFunction, PRNG, Instance>::vOW(Instance *inst)
     number_steps_locate = 0;
     number_steps = 0;
     final_avg_random_functions = 0.;
+
+    printf("Start bench\n");
+    int64_t start = cpu_cycles();
+    /*Show how good our benching is*/
+    for (int i = 0; i < 1000; i++) {
+        busy_wait(MILLION_CYCLES);
+    }
+    int64_t end = cpu_cycles();
+    printf("Benched: %ld\n", (end - start)/ 1000);
 
     /* resync */
     resync_state = new resync_state_t();
