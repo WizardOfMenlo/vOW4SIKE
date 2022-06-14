@@ -17,6 +17,7 @@ ITERS = 10
 # We want to verify that a function iterations that computes that many points incurs in the appropriate slowdown
 
 def predicted_time(log_n, log_w):
+    # Assumes 1million cycles per func iter and 4 Ghz
     inv_theta = 1/(2.25 * math.sqrt(2**(log_w - log_n)))
     return ITERS * (inv_theta * 10**6 * 10 * 2**log_w / (4 * 10**9 * ncpus)) / 3600
 
@@ -24,11 +25,13 @@ def predicted_cycles(num_steps, calibrated_cycles):
     return num_steps * calibrated_cycles / ncpus
 
 def parse_cycles(ls: str):
+    # You will get a list of cycles, which then you 
+    # can average over. Should be good enough for us
+    readings = []
     for l in ls.splitlines():
-        if l.strip().startswith('Benched'):
-            return int(l.strip().split(':')[1])
-
-    raise ValueError('What')
+        if l.strip().startswith('Benchmark'):
+            readings.append(float(l.strip().split(':')[1]))
+    return sum(readings) / len(readings)
 
 
 total_time = 0
@@ -49,7 +52,6 @@ for n, w in experiments:
    calibrated_cycles[str(n) + '_' + str(w)] = cycles_parsed
    
    
-
 aggregated_res = {}
 with open('gen_full_atk_False_hag_False') as f:
     lines = list(f)

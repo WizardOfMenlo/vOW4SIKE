@@ -1,6 +1,8 @@
 #include <cassert>
 #include <omp.h>
 #include "vow.hpp"
+#include "utils/busy_wait.hpp"
+#include "utils/cycles.h"
 
 /**
  * @brief find a number of points and measure how long it takes on the avaliable core
@@ -80,6 +82,25 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         points_ratio[i] = 1. / (double)instance->N_OF_CORES;
     }
 #endif
+    #define WARMUP_ITERS 10000
+    #define BENCH_ITERS 1000
+
+    // We run some benchmark for each cores to get the cost of function step
+    #pragma omp parallel num_threads(instance->N_OF_CORES)
+    { 
+        int thread_id = omp_get_thread_num();
+        // Warmup 
+        for (int i = 0; i < WARMUP_ITERS; i++) {
+            busy_wait(MILLION_CYCLES);
+        }
+
+        int64_t start = cpu_cycles();
+        for (int i = 0; i < BENCH_ITERS; i++) {
+            busy_wait(MILLION_CYCLES);
+        }
+        int64_t end = cpu_cycles();
+        printf("Benchmark [%d]: %f cycles\n", thread_id,((double) (end - start))/BENCH_ITERS);
+    }
 }
 
 #include "templating/vow.inc"
