@@ -11,7 +11,7 @@ experiments = [ (24, 17), (24, 16) ]
 
 ncpus = 16 # min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 1
 
-ITERS = 10
+ITERS = 5
 
 # We have set the cycles for function iterations to be ~ 1 million cycles. 
 # We want to verify that a function iterations that computes that many points incurs in the appropriate slowdown
@@ -29,8 +29,8 @@ def parse_cycles(ls: str):
     # can average over. Should be good enough for us
     readings = []
     for l in ls.splitlines():
-        if l.strip().startswith('Benchmark'):
-            readings.append(float(l.strip().split(':')[1]))
+        if l.strip().startswith('Benchmark') and not 'running' in l:
+            readings.append(float(l.strip().split(':')[1].replace('cycles', '').strip()))
     return sum(readings) / len(readings)
 
 
@@ -48,6 +48,7 @@ calibrated_cycles = {}
 
 for n, w in experiments:
    cmd_run = subprocess.run(f"python gen.py -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -no_hag -iterations {ITERS}".split(' '), capture_output=True, text=True)
+   print(cmd_run.stdout)
    cycles_parsed = parse_cycles(cmd_run.stdout)
    calibrated_cycles[str(n) + '_' + str(w)] = cycles_parsed
    
@@ -65,7 +66,7 @@ with open('gen_full_atk_False_hag_False') as f:
         exp_cycles = predicted_cycles(num_steps, calibrated_cycles[key])
 
         aggregated_res[key] = { 'n' : nbits_state, 'w': memory_log_size, 'num_steps': num_steps, 'cycles': cycles, 'exp_cycles': exp_cycles,
-                'ratio': cycles/exp_cycles }
+                'ratio': cycles/exp_cycles, 'calibration': calibrated_cycles[key] }
         
 with open('aggregated_function_iterations_readings.json', 'w') as output:
     json.dump(aggregated_res, output)

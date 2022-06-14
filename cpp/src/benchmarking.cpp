@@ -82,8 +82,8 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         points_ratio[i] = 1. / (double)instance->N_OF_CORES;
     }
 #endif
-    #define WARMUP_ITERS 10000
-    #define BENCH_ITERS 1000
+    #define WARMUP_ITERS 100000
+    #define BENCH_ITERS 10000
 
     // We run some benchmark for each cores to get the cost of function step
     #pragma omp parallel num_threads(instance->N_OF_CORES)
@@ -99,6 +99,8 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
             busy_wait(MILLION_CYCLES);
         }
         int64_t end = cpu_cycles();
+
+        #pragma omp critical
         printf("Benchmark [%d]: %f cycles\n", thread_id,((double) (end - start))/BENCH_ITERS);
     }
 }
