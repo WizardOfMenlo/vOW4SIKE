@@ -16,6 +16,7 @@ public:
     uint64_t function_version;
     Point *image;
     struct timespec sleep_elapsed_time;
+    struct timespec delay;
 
 
     GenRandomFunction(GenInstance *instance);
