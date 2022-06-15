@@ -1,57 +1,103 @@
 import subprocess
 import json
-import psutil
 import math
 
-# Each iterations needs to compute 10 w distinguished! points
-# So that is 10^7 * theta * w cycles / (4 * 10^9 * L) = theta * w / 400 * L seconds
-# Suppose we run on Daisen and take 80 cores. We can run in 5-6h all iterations for w = 2^17
+experiments = [(20, 10), (22, 14), (26, 16), (28, 18), (30, 20)]
 
-experiments = [ (24, 17), (24, 16) ]
+# Use all 128 cores
+ncpus = 128 # min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 2
 
-ncpus = 16 # min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 1
 
-ITERS = 5
+# 100 iterations per function version
+ITERS = 100
 
-# We have set the cycles for function iterations to be ~ 1 million cycles. 
-# We want to verify that a function iterations that computes that many points incurs in the appropriate slowdown
 
-def predicted_time(log_n, log_w):
+# Each function call is at least 40 microseconds (hopefully not twice that)
+
+def predicted_time_low(log_n, log_w):
     # Assumes 1ms per func iter
     inv_theta = 1/(2.25 * math.sqrt(2**(log_w - log_n)))
     num_iterations = ITERS * (inv_theta * 10 * 2**log_w)
     # Each iterations is 10 microseconds
-    time_iter = 10 * 1e-6
+    time_iter = 40 * 1e-6
     return num_iterations * time_iter / ncpus
+
+
+def predicted_time_high(log_n, log_w):
+    # Assumes 1ms per func iter
+    inv_theta = 1/(2.25 * math.sqrt(2**(log_w - log_n)))
+    num_iterations = ITERS * (inv_theta * 10 * 2**log_w)
+    # Each iterations is 10 microseconds
+    time_iter = 80 * 1e-6
+    return num_iterations * time_iter / ncpus
+
+# Returns a list of in the order that they appear
+def parse_sleeps(output: str):
+    res = []
+    for l in output.splitlines():
+        if 'sleep times' in l:
+            l = l.strip()
+            cycle_counts = l.split(':')[1].strip().split(' ')
+            cycle_counts = [float(s.strip()) for s in cycle_counts]
+            res.append(cycle_counts)
+    return res
+    
+def sleep_backups(n, w, sleeps):
+    with open('sleep_backup', 'w') as f:
+        f.write(json.dumps({'n': n, 'w': w, 'sleeps': sleeps}) + '\n')
 
 total_time = 0
 for n, w in experiments:
     if n <= w:
         continue
-    pred = predicted_time(n, w)
-    print('Predict this number of hours ', pred / 3600)
-    total_time += pred / 3600
+    pred_low, pred_high = predicted_time_low(n, w), predicted_time_high(n, w)
+    print(f'Estimate: [{pred_low}, {pred_high}]s')
+    total_time += pred_high
 
 print('Total: ', total_time)
 
+sleep_dictionary = {}
 for n, w in experiments:
-   cmd_run = subprocess.run(f"python gen.py -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -no_hag -iterations {ITERS}".split(' '))
+   index = f'{n}_{w}' 
+   cmd_run = subprocess.run(f"python gen.py -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -no_hag -iterations {ITERS}".split(' '), capture_output=True, text=True)
+   print(cmd_run.stdout)
+   sleeps = parse_sleeps(cmd_run.stdout)
+   # Make sure not to loose our work
+   sleep_backups(n, w, sleeps)
+   sleep_dictionary[index] = sleeps
    
    
 aggregated_res = {}
 with open('gen_full_atk_False_hag_False') as f:
     lines = list(f)
     dicts = [json.loads(l) for l in lines]
-    for d in dicts:
-        nbits_state, memory_log_size, _, _ = d['k']
-        num_steps = d['v']['num_steps']
-        # Cycles are wall time cycles
-        wall_time = d['v']['wall_time']
-        key = str(nbits_state)+'_'+str(memory_log_size)
-        predicted_wall_time = predicted_time(nbits_state, memory_log_size)
+    for exp in dicts:
+        n, w, _, _ = exp['k']
+        index = f'{n}_{w}' 
+        sleep_data = sleep_dictionary[index]
+        full_record = []
+        for run_record in exp['v']['full_data']:
+            associated_sleeps = sleep_data[run_record['salt'] - 1]
+            exp_total_time = sum(associated_sleeps)
 
-        aggregated_res[key] = { 'n' : nbits_state, 'w': memory_log_size, 'num_steps': num_steps, 'wall_time': wall_time, 'exp_wall_time': predicted_wall_time,
-                'ratio': wall_time/predicted_wall_time }
+            # We use these to compute the exact t_{c, i}
+            # Then retrofit these to the model
+            num_steps = run_record['num_steps']
+            share_per_core = [s/sum(associated_sleeps) for s in associated_sleeps]
+            time_per_point_on_each_core = [associated_sleeps[i] / (share_per_core[i] * num_steps) for i in range(len(share_per_core))]
+            r = {
+                    'wall_time' : run_record['wall_time'],
+                    'total_time': run_record['total_time'],
+                    'sleeps': associated_sleeps,
+                    'exp_total_time_func_evals': exp_total_time,
+                    'ratio_only_func_evals': run_record['total_time'] / exp_total_time,
+                    'time_per_point_on_each_core': time_per_point_on_each_core
+                    }
+            full_record.append(r)
+
+        record = {'n': n, 'w': w, 'full_data': full_record}
+        aggregated_res[index] = record
+
         
 with open('aggregated_sleep_function_iterations_readings.json', 'w') as output:
     json.dump(aggregated_res, output)
