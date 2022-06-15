@@ -50,6 +50,7 @@ void GenInstance::process()
     assert(MEMORY_LOG_SIZE < 64); /* Assumes that MEMORY_SIZE < 2^RADIX */
     /* Initialize vOW params */
     THETA = ALPHA * sqrt((double)MEMORY_SIZE / (double)pow(2, NBITS_STATE));
+    printf("Theta: %f\n", THETA);
     MAX_DIST = (uint64_t)(BETA * MEMORY_SIZE);
     MAX_STEPS = ceil(GAMMA / THETA);
     MAX_FUNCTION_VERSIONS = 10000; // noqa
@@ -64,6 +65,8 @@ void GenInstance::process()
     else { /* Use max precision */
         DIST_BOUND = THETA * pow(2,64);
     }
+
+    printf("Dist bound: %f\n", DIST_BOUND);
     assert(NBITS_STATE > MEMORY_LOG_SIZE); // > -log(theta), we want some resolution
 
     XOF((unsigned char *)&initial_function_version,

@@ -1,11 +1,36 @@
+#include <bits/types/struct_timespec.h>
 #include <cstdio>
+#include <ctime>
 #include <omp.h>
+#include <unistd.h>
 #include "random_function.hpp"
 #include "../settings.h"
 #include "../prng/xof.h"
 #include "../utils/fix_overflow.h"
-#include "../utils/busy_wait.hpp"
 #include "../utils/cycles.h"
+
+struct timespec diff_timespec(const struct timespec *time1,
+    const struct timespec *time0) {
+  struct timespec diff = {.tv_sec = time1->tv_sec - time0->tv_sec, .tv_nsec =
+      time1->tv_nsec - time0->tv_nsec};
+  if (diff.tv_nsec < 0) {
+    diff.tv_nsec += 1000000000;
+    diff.tv_sec--;
+  }
+  return diff;
+}
+
+
+struct timespec add_timespec(const struct timespec *time1,
+    const struct timespec *time0) {
+  struct timespec sum = {.tv_sec = time1->tv_sec + time0->tv_sec, .tv_nsec =
+      time1->tv_nsec + time0->tv_nsec};
+  if (sum.tv_nsec >= 1000000000) {
+    sum.tv_nsec -= 1000000000;
+    sum.tv_sec++;
+  }
+  return sum;
+}
 
 template <class Point>
 GenRandomFunction<Point>::GenRandomFunction(GenInstance *instance)
@@ -14,6 +39,11 @@ GenRandomFunction<Point>::GenRandomFunction(GenInstance *instance)
     preimages[0] = new Point(instance);
     preimages[1] = new Point(instance);
     function_version = instance->initial_function_version;
+
+    // Set the timing to 0
+    sleep_elapsed_time.tv_sec = 0;
+    sleep_elapsed_time.tv_nsec = 0;
+    
     // the function version should be used together with a salted stateless XOF to seed the function
     // this way independently held random functions with th esame version and basic XOF should
     // have the same golden collision. To avoid insta-wins, we offset the salt for seeding from the
@@ -58,12 +88,20 @@ void GenRandomFunction<Point>::update()
 template <class Point>
 void GenRandomFunction<Point>::eval(Point &out, Point &in)
 {
-    // Approximately 1 million cycles
-    //int64_t start = cpu_cycles();
-    busy_wait(MILLION_CYCLES);
-    //int64_t end = cpu_cycles();
-    //printf("%ld\n", end - start);
-    //printf("%f\n", (end - start)/((double) 1000000));
+    struct timespec start_time, delay, end_time, diff;
+    delay.tv_sec = 0;
+    // Sleep 10microsecond
+    delay.tv_nsec = 10 * 1000;
+
+    
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &delay, NULL);
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+    
+    diff = diff_timespec(&end_time, &start_time);
+    
+    sleep_elapsed_time = add_timespec(&sleep_elapsed_time, &diff);
+
     if (in == *preimages[0] || in == *preimages[1])
     {
         out.from_point(*image);

@@ -512,18 +512,20 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
 
     // runs cores benchmarks (across remote machines if used) to allocate work
     points_ratio = (double *)calloc(instance->N_OF_CORES, sizeof(double));
+    int* core_points = (int*) calloc(instance->N_OF_CORES, sizeof(double));
+    struct timespec* sleep_times = (struct timespec*) calloc(instance->N_OF_CORES, sizeof(struct timespec));
     if (points_ratio == NULL)
     {
         fprintf(stderr, "error: could not alloc points_ratio memory");
         goto end;
     }
-    printf("s_benchmark\n");
     benchmark(5000);
     // printf("after benchmark instance->PRNG_SEED = %lu\n", instance->PRNG_SEED);
     // getchar();
 
     // ( debug output )
-    // printf("ratios: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%g ", points_ratio[i]); } printf("\n");
+    printf("ratios: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%g ", points_ratio[i]); } printf("\n");
+
 
     // runs the real attack
     #pragma omp parallel num_threads(instance->N_OF_CORES)
@@ -560,6 +562,7 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
             windowed_resync(this, private_state);
             #endif
 
+            core_points[private_state.thread_id] += 1;
             // mine new points
             if (iteration(private_state, t, ratio_of_points_to_mine))
             {
@@ -567,6 +570,9 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
             }
         }
         internal_cpu_time = omp_get_wtime() - internal_cpu_time;
+
+        int t_id = omp_get_thread_num();
+        sleep_times[t_id] = private_state.step_function->sleep_elapsed_time;
 
         // Collect all the stats from each thread
         #pragma omp critical
@@ -591,7 +597,12 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     #endif
     cycles += cpu_cycles();
     free(points_ratio);
+    
+    printf("sleep times: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%ld.%ld ", sleep_times[i].tv_sec, sleep_times[i].tv_nsec); } printf("\n");
 
+    printf("points_core: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%d ", core_points[i]); } printf("\n");
+    free(core_points);
+    free(sleep_times);
     wall_time = omp_get_wtime() - wall_time;
 
     return success;
