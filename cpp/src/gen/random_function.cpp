@@ -1,4 +1,3 @@
-#include <bits/types/struct_timespec.h>
 #include <cstdio>
 #include <ctime>
 #include <omp.h>

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstring>
 #include "config.h"
+#include <unistd.h>
 extern "C"
 {
 #if (OS_TARGET == OS_LINUX)
@@ -601,6 +602,12 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     printf("sleep times: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%ld.%ld ", sleep_times[i].tv_sec, sleep_times[i].tv_nsec); } printf("\n");
 
     printf("points_core: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%d ", core_points[i]); } printf("\n");
+
+    // Look, I just want this to be 100% sure to be flushed
+    fflush(stdout);
+    std::cout << "Finished" << std::endl;
+    usleep(100);
+
     free(core_points);
     free(sleep_times);
     wall_time = omp_get_wtime() - wall_time;
