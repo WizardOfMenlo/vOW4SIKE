@@ -535,6 +535,11 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
         double ratio_of_points_to_mine = points_ratio[private_state.thread_id];
         double internal_cpu_time = omp_get_wtime();
 
+        // Slow down half the cores
+        if (private_state.thread_id % 2 == 0) {
+            private_state.step_function->delay.tv_nsec *= 5;
+        }
+
         // this is not being used at the time, may be useful for remote storage.
         // if added, add also to vOW::benchmark();
         // initialize_private_memory(this, &private_state);
