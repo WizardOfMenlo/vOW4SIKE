@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <unistd.h>
 #include "config.h"
 extern "C"
 {
@@ -505,20 +506,25 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     success = false;
     wall_time = omp_get_wtime();
     points_ratio = NULL;
-    cycles = -cpu_cycles();
-
+    
     // explicitly disable dynamic teams (ensures running on vow->instance->N_OF_CORES threads)
     omp_set_dynamic(0);
-
-    // runs cores benchmarks (across remote machines if used) to allocate work
+    
+        // runs cores benchmarks (across remote machines if used) to allocate work
     points_ratio = (double *)calloc(instance->N_OF_CORES, sizeof(double));
+    double* cores_calibration = (double *)calloc(instance->N_OF_CORES, sizeof(double));
     if (points_ratio == NULL)
     {
         fprintf(stderr, "error: could not alloc points_ratio memory");
         goto end;
     }
     printf("s_benchmark\n");
-    benchmark(5000);
+    benchmark(5000, cores_calibration);
+
+    printf("core benchmark: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%f ", cores_calibration[i]); } printf("\n");
+    free(cores_calibration);
+
+    cycles = -cpu_cycles();
     // printf("after benchmark instance->PRNG_SEED = %lu\n", instance->PRNG_SEED);
     // getchar();
 
@@ -584,6 +590,8 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
         // cleanup_private_memory(&private_state);  // se above comment for initialize_private_memory
     }
 
+
+
     end:
     #if (OS_TARGET == OS_LINUX)
     // need to reset it since it's global
@@ -593,6 +601,12 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     free(points_ratio);
 
     wall_time = omp_get_wtime() - wall_time;
+
+    // Ensure we are done
+    printf("Done\n");
+    fflush(stdout);
+    std::cout << "Really" << std::endl;
+    usleep(4000);
 
     return success;
 }

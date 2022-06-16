@@ -8,7 +8,7 @@
  * @brief find a number of points and measure how long it takes on the avaliable core
  */
 template <class Point, class Memory, class RandomFunction, class PRNG, class Instance>
-void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t target_number_of_points)
+void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t target_number_of_points, double* cores_calibration)
 {
 #ifdef RUN_ACTUAL_BENCHMARKING
     double total_time = 0.;
@@ -100,8 +100,7 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         }
         int64_t end = cpu_cycles();
 
-        #pragma omp critical
-        printf("Benchmark [%d]: %f cycles\n", thread_id,((double) (end - start))/BENCH_ITERS);
+        cores_calibration[thread_id] = ((double) (end - start))/BENCH_ITERS;
     }
 }
 
