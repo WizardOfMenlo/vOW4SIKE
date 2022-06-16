@@ -9,8 +9,7 @@
 template <class Point, class Memory, class RandomFunction, class PRNG, class Instance>
 void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t target_number_of_points)
 {
-#ifdef RUN_ACTUAL_BENCHMARKING
-    double total_time = 0.;
+    double total_tp = 0.;
     double *benchmark;
     vOW<Point, Memory, RandomFunction, PRNG, Instance> benchmark_vow(instance);
 
@@ -41,6 +40,11 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
             benchmark_vow.instance
         );
         Trip<Point, Instance> t(benchmark_vow.instance);
+        
+        // Slow down half the cores
+        if (benchmark_ps.thread_id % 2 == 0) {
+            benchmark_ps.step_function->delay.tv_nsec *= 5;
+        }
 
         double wall_time = omp_get_wtime();
         for (uint64_t i = 0; i < target_number_of_points; i++)
@@ -49,10 +53,12 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         }
         wall_time = omp_get_wtime() - wall_time;
 
+        double tp = target_number_of_points / wall_time;
+
         // save result
-        benchmark[thread_id] = wall_time;
+        benchmark[thread_id] = tp;
         #pragma omp atomic
-        total_time += wall_time;
+        total_tp += tp;
     }
 
     // printf("benchmark: ");
@@ -68,19 +74,11 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
     #else
     for (uint64_t i = 0; i < instance->N_OF_CORES; i++)
     {
-        points_ratio[i] = benchmark[i] / total_time;
+        points_ratio[i] = benchmark[i] / total_tp;
     }
     #endif
 
     free(benchmark);
-
-#else
-    (void)target_number_of_points;
-    for (uint64_t i = 0; i < instance->N_OF_CORES; i++)
-    {
-        points_ratio[i] = 1. / (double)instance->N_OF_CORES;
-    }
-#endif
 }
 
 #include "templating/vow.inc"

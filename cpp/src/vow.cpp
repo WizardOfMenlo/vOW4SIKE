@@ -504,9 +504,7 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     // #endif
 
     success = false;
-    wall_time = omp_get_wtime();
     points_ratio = NULL;
-    cycles = -cpu_cycles();
 
     // explicitly disable dynamic teams (ensures running on vow->instance->N_OF_CORES threads)
     omp_set_dynamic(0);
@@ -521,6 +519,9 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
         goto end;
     }
     benchmark(5000);
+    
+    wall_time = omp_get_wtime();
+    cycles = -cpu_cycles();
     // printf("after benchmark instance->PRNG_SEED = %lu\n", instance->PRNG_SEED);
     // getchar();
 
