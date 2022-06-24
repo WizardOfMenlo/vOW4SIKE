@@ -2,8 +2,10 @@
 #include <cstdint>
 #include <iostream>
 #include <fstream>
+#include <omp.h>
 #include "../utils/memavail.h"
 #include "ram.hpp"
+#include "../utils/timespec_ops.hpp"
 
 template <class Point, class Instance>
 LocalMemory<Point, Instance>::LocalMemory(uint64_t _max_entries, Instance *instance)
@@ -68,6 +70,11 @@ LocalMemory<Point, Instance>::LocalMemory(uint64_t _max_entries, Instance *insta
         memory_exception mem_ex;
         throw mem_ex;
     }
+
+    sleep_elapsed_time = (struct timespec*) calloc(instance->N_OF_CORES, sizeof(struct timespec));
+    delay.tv_sec = 0;
+    delay.tv_nsec = 40 * 1000;
+ 
     
     if ((memory = (Trip<Point, Instance> **)calloc(max_entries, sizeof(Trip<Point, Instance> *))) == NULL)
     {
@@ -89,11 +96,23 @@ LocalMemory<Point, Instance>::~LocalMemory()
         delete memory[i];
     }
     free(memory);
+    free(sleep_elapsed_time);
 }
 
 template <class Point, class Instance>
 bool LocalMemory<Point, Instance>::send_point(Trip<Point, Instance> *t, uint64_t address, Trip<Point, Instance>* read_ptr)
 {
+    int t_id = omp_get_thread_num();
+    struct timespec start_time, end_time, diff;
+    
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &delay, NULL);
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+    
+    diff = diff_timespec(&end_time, &start_time);
+    
+    sleep_elapsed_time[t_id] = add_timespec(&sleep_elapsed_time[t_id], &diff);
+
     // Read into the ptr that we have been given
     read_ptr->from_trip(memory[address]);
 

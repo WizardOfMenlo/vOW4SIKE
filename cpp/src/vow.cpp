@@ -536,11 +536,6 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
         double ratio_of_points_to_mine = points_ratio[private_state.thread_id];
         double internal_cpu_time = omp_get_wtime();
 
-        // Slow down half the cores
-        if (private_state.thread_id % 2 == 0) {
-            private_state.step_function->delay.tv_nsec *= 5;
-        }
-
         // this is not being used at the time, may be useful for remote storage.
         // if added, add also to vOW::benchmark();
         // initialize_private_memory(this, &private_state);
@@ -606,7 +601,7 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     free(points_ratio);
     
     printf("sleep times: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%ld.%ld ", sleep_times[i].tv_sec, sleep_times[i].tv_nsec); } printf("\n");
-
+    printf("memory times: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%ld.%ld ", memory->sleep_elapsed_time[i].tv_sec, memory->sleep_elapsed_time[i].tv_nsec); } printf("\n");
     printf("points_core: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%d ", core_points[i]); } printf("\n");
 
     // Look, I just want this to be 100% sure to be flushed

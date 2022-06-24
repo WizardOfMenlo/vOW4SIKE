@@ -17,19 +17,22 @@ ITERS = 100
 def predicted_time_low(log_n, log_w):
     # Assumes 1ms per func iter
     inv_theta = 1/(2.25 * math.sqrt(2**(log_w - log_n)))
-    num_iterations = ITERS * (inv_theta * 10 * 2**log_w)
+    dist_point = ITERS * 10 * 2**log_w
+    num_iterations = inv_theta * dist_point
     # Each iterations is 10 microseconds
     time_iter = 40 * 1e-6
-    return num_iterations * time_iter / ncpus
-
+    time_store = 40 * 1e-6
+    return ((num_iterations * time_iter) + (dist_point * time_store)) / ncpus
 
 def predicted_time_high(log_n, log_w):
     # Assumes 1ms per func iter
     inv_theta = 1/(2.25 * math.sqrt(2**(log_w - log_n)))
-    num_iterations = ITERS * (inv_theta * 10 * 2**log_w)
+    dist_point = ITERS * 10 * 2**log_w
+    num_iterations = inv_theta * dist_point
     # Each iterations is 10 microseconds
     time_iter = 80 * 1e-6
-    return num_iterations * time_iter / ncpus
+    time_store = 80 * 1e-6
+    return ((num_iterations * time_iter) + (dist_point * time_store)) / ncpus
 
 # Returns a list of in the order that they appear
 def parse_sleeps(output: str):
@@ -42,9 +45,22 @@ def parse_sleeps(output: str):
             res.append(cycle_counts)
     return res
     
-def sleep_backups(n, w, sleeps):
+def sleep_backups(n, w, sleeps, mem_sleeps):
     with open('sleep_backup', 'w') as f:
-        f.write(json.dumps({'n': n, 'w': w, 'sleeps': sleeps}) + '\n')
+        f.write(json.dumps({'n': n, 'w': w, 'sleeps': sleeps, 'mem_sleeps': mem_sleeps}) + '\n')
+
+
+# Returns a list of in the order that they appear
+def parse_memory_sleeps(output: str):
+    res = []
+    for l in output.splitlines():
+        if 'memory times' in l:
+            l = l.strip()
+            cycle_counts = l.split(':')[1].strip().split(' ')
+            cycle_counts = [float(s.strip()) for s in cycle_counts]
+            res.append(cycle_counts)
+    return res
+    
 
 total_time = 0
 for n, w in experiments:
@@ -57,14 +73,17 @@ for n, w in experiments:
 print('Total: ', total_time)
 
 sleep_dictionary = {}
+mem_sleep_dictionary = {}
 for n, w in experiments:
    index = f'{n}_{w}' 
    cmd_run = subprocess.run(f"python gen.py -min_cpus {ncpus} -max_cpus {ncpus} -min_mem {w} -max_mem {w} -min_nbits {n} -max_nbits {n} -no_hag -iterations {ITERS}".split(' '), capture_output=True, text=True)
    print(cmd_run.stdout)
    sleeps = parse_sleeps(cmd_run.stdout)
-   # Make sure not to loose our work
-   sleep_backups(n, w, sleeps)
+   mem_sleeps = parse_memory_sleeps(cmd_run.stdout)
+   # Make sure not to lose our work
+   sleep_backups(n, w, sleeps, mem_sleeps)
    sleep_dictionary[index] = sleeps
+   mem_sleep_dictionary[index] = mem_sleeps
    
    
 aggregated_res = {}
@@ -75,23 +94,33 @@ with open('gen_full_atk_False_hag_False') as f:
         n, w, _, _ = exp['k']
         index = f'{n}_{w}' 
         sleep_data = sleep_dictionary[index]
+        mem_sleep_data = mem_sleep_dictionary[index]
         full_record = []
         for run_record in exp['v']['full_data']:
-            associated_sleeps = sleep_data[run_record['salt'] - 1]
-            exp_total_time = sum(associated_sleeps)
+            ind = run_record['salt']-1
+            associated_sleeps = sleep_data[ind]
+            associated_mem_sleeps = mem_sleep_data[ind]
+            exp_total_time_func_only = sum(associated_sleeps)
+            exp_total_time_memory_only = sum(associated_mem_sleeps)
+            exp_total_time = exp_total_time_func_only + exp_total_time_memory_only
 
             # We use these to compute the exact t_{c, i}
             # Then retrofit these to the model
             num_steps = run_record['num_steps']
-            share_per_core = [s/sum(associated_sleeps) for s in associated_sleeps]
-            time_per_point_on_each_core = [associated_sleeps[i] / (share_per_core[i] * num_steps) for i in range(len(share_per_core))]
+            dist_points = run_record['dist_points']
+            # Not true...
             r = {
                     'wall_time' : run_record['wall_time'],
                     'total_time': run_record['total_time'],
-                    'sleeps': associated_sleeps,
-                    'exp_total_time_func_evals': exp_total_time,
-                    'ratio_only_func_evals': run_record['total_time'] / exp_total_time,
-                    'time_per_point_on_each_core': time_per_point_on_each_core
+                    'sleeps': { 'func': associated_sleeps, 'mem' : associated_mem_sleeps },
+                    'exp_total_time_func_evals': exp_total_time_func_only,
+                    'exp_total_time_mem': exp_total_time_memory_only,
+                    'exp_total_time': exp_total_time,
+                    'ratio_only_func_evals': run_record['total_time'] / exp_total_time_func_only,
+                    'ratio_only_memory': run_record['total_time'] / exp_total_time_memory_only,
+                    'ratio_both': run_record['total_time'] / exp_total_time,
+                    # Assuming complete parallizetion
+                    'ratio_wall_time_both' : run_record['wall_time'] / (exp_total_time / ncpus)
                     }
             full_record.append(r)
 

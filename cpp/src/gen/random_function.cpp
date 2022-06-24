@@ -7,29 +7,8 @@
 #include "../prng/xof.h"
 #include "../utils/fix_overflow.h"
 #include "../utils/cycles.h"
+#include "../utils/timespec_ops.hpp"
 
-struct timespec diff_timespec(const struct timespec *time1,
-    const struct timespec *time0) {
-  struct timespec diff = {.tv_sec = time1->tv_sec - time0->tv_sec, .tv_nsec =
-      time1->tv_nsec - time0->tv_nsec};
-  if (diff.tv_nsec < 0) {
-    diff.tv_nsec += 1000000000;
-    diff.tv_sec--;
-  }
-  return diff;
-}
-
-
-struct timespec add_timespec(const struct timespec *time1,
-    const struct timespec *time0) {
-  struct timespec sum = {.tv_sec = time1->tv_sec + time0->tv_sec, .tv_nsec =
-      time1->tv_nsec + time0->tv_nsec};
-  if (sum.tv_nsec >= 1000000000) {
-    sum.tv_nsec -= 1000000000;
-    sum.tv_sec++;
-  }
-  return sum;
-}
 
 template <class Point>
 GenRandomFunction<Point>::GenRandomFunction(GenInstance *instance)
@@ -39,12 +18,15 @@ GenRandomFunction<Point>::GenRandomFunction(GenInstance *instance)
     preimages[1] = new Point(instance);
     function_version = instance->initial_function_version;
 
+
     // Set the timing to 0
     sleep_elapsed_time.tv_sec = 0;
     sleep_elapsed_time.tv_nsec = 0;
 
+
     delay.tv_sec = 0;
     delay.tv_nsec = 40 * 1000;
+    should_delay = true;
     
     // the function version should be used together with a salted stateless XOF to seed the function
     // this way independently held random functions with th esame version and basic XOF should
@@ -90,15 +72,17 @@ void GenRandomFunction<Point>::update()
 template <class Point>
 void GenRandomFunction<Point>::eval(Point &out, Point &in)
 {
-    struct timespec start_time, end_time, diff;
-    
-    clock_gettime(CLOCK_MONOTONIC, &start_time);
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &delay, NULL);
-    clock_gettime(CLOCK_MONOTONIC, &end_time);
-    
-    diff = diff_timespec(&end_time, &start_time);
-    
-    sleep_elapsed_time = add_timespec(&sleep_elapsed_time, &diff);
+    if (should_delay) {
+        struct timespec start_time, end_time, diff;
+        
+        clock_gettime(CLOCK_MONOTONIC, &start_time);
+        clock_nanosleep(CLOCK_MONOTONIC, 0, &delay, NULL);
+        clock_gettime(CLOCK_MONOTONIC, &end_time);
+        
+        diff = diff_timespec(&end_time, &start_time);
+        
+        sleep_elapsed_time = add_timespec(&sleep_elapsed_time, &diff);
+    }
 
     if (in == *preimages[0] || in == *preimages[1])
     {

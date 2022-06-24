@@ -41,11 +41,6 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         );
         Trip<Point, Instance> t(benchmark_vow.instance);
         
-        // Slow down half the cores
-        if (benchmark_ps.thread_id % 2 == 0) {
-            benchmark_ps.step_function->delay.tv_nsec *= 5;
-        }
-
         double wall_time = omp_get_wtime();
         for (uint64_t i = 0; i < target_number_of_points; i++)
         {
@@ -53,7 +48,7 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         }
         wall_time = omp_get_wtime() - wall_time;
 
-        double tp = target_number_of_points / wall_time;
+        double tp = 1 / wall_time;
 
         // save result
         benchmark[thread_id] = tp;
