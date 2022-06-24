@@ -12,6 +12,9 @@ private_state_t<Point, PRNG, RandomFunction, Instance>::private_state_t(
 {
     thread_id = omp_get_thread_num();
 
+    mem_sleep_elapsed.tv_sec = 0;
+    mem_sleep_elapsed.tv_nsec = 0;
+
     current_dist = 0;
     random_functions = 1;
     step_function = new RandomFunction(instance);

@@ -13,6 +13,8 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
     double *benchmark;
     vOW<Point, Memory, RandomFunction, PRNG, Instance> benchmark_vow(instance);
 
+    benchmark_vow.memory->delay.tv_nsec = 0;
+
     #ifdef STORE_IN_DATABASE
     db_settings_t db_settings = load_db_settings();
     #endif

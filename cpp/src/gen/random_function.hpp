@@ -17,7 +17,6 @@ public:
     Point *image;
     struct timespec sleep_elapsed_time;
     struct timespec delay;
-    bool should_delay;
 
 
     GenRandomFunction(GenInstance *instance);

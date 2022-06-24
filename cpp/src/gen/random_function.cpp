@@ -26,7 +26,6 @@ GenRandomFunction<Point>::GenRandomFunction(GenInstance *instance)
 
     delay.tv_sec = 0;
     delay.tv_nsec = 40 * 1000;
-    should_delay = true;
     
     // the function version should be used together with a salted stateless XOF to seed the function
     // this way independently held random functions with th esame version and basic XOF should
@@ -72,17 +71,15 @@ void GenRandomFunction<Point>::update()
 template <class Point>
 void GenRandomFunction<Point>::eval(Point &out, Point &in)
 {
-    if (should_delay) {
-        struct timespec start_time, end_time, diff;
-        
-        clock_gettime(CLOCK_MONOTONIC, &start_time);
-        clock_nanosleep(CLOCK_MONOTONIC, 0, &delay, NULL);
-        clock_gettime(CLOCK_MONOTONIC, &end_time);
-        
-        diff = diff_timespec(&end_time, &start_time);
-        
-        sleep_elapsed_time = add_timespec(&sleep_elapsed_time, &diff);
-    }
+    struct timespec start_time, end_time, diff;
+    
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &delay, NULL);
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+    
+    diff = diff_timespec(&end_time, &start_time);
+    
+    sleep_elapsed_time = add_timespec(&sleep_elapsed_time, &diff);
 
     if (in == *preimages[0] || in == *preimages[1])
     {

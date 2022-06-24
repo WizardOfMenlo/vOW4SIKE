@@ -1,4 +1,5 @@
 #pragma once
+#include <time.h>
 #include <cstdint>
 #include "../prng/interface.hpp"
 #include "points.hpp"
@@ -35,6 +36,8 @@ class private_state_t // rename this?
 
         /* Hansel & Gretel */
         CrumbStruct crumbs;
+
+        struct timespec mem_sleep_elapsed;
 
         private_state_t(Instance *instance);
         ~private_state_t();

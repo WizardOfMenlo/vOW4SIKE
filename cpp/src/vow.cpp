@@ -355,7 +355,7 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::iteration(
         id = private_state.current->current_state->mem_index(private_state.random_functions);
 
         // Writes a point to remote memory, and, if on local, do the usual checks for backtracking
-        bool local = memory->send_point(private_state.current, id, private_state.trip);
+        bool local = memory->send_point(private_state.current, id, private_state.trip, &private_state.mem_sleep_elapsed);
 
         if (local) {
             read = (private_state.trip->current_steps > 0); // if == 0, the mem location was empty
@@ -513,6 +513,7 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     points_ratio = (double *)calloc(instance->N_OF_CORES, sizeof(double));
     int* core_points = (int*) calloc(instance->N_OF_CORES, sizeof(double));
     struct timespec* sleep_times = (struct timespec*) calloc(instance->N_OF_CORES, sizeof(struct timespec));
+    struct timespec* mem_sleep_times = (struct timespec*) calloc(instance->N_OF_CORES, sizeof(struct timespec));
     if (points_ratio == NULL)
     {
         fprintf(stderr, "error: could not alloc points_ratio memory");
@@ -575,6 +576,7 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
 
         int t_id = omp_get_thread_num();
         sleep_times[t_id] = private_state.step_function->sleep_elapsed_time;
+        mem_sleep_times[t_id] = private_state.mem_sleep_elapsed;
 
         // Collect all the stats from each thread
         #pragma omp critical
@@ -601,8 +603,8 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     free(points_ratio);
     
     printf("sleep times: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%ld.%ld ", sleep_times[i].tv_sec, sleep_times[i].tv_nsec); } printf("\n");
-    printf("memory times: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%ld.%ld ", memory->sleep_elapsed_time[i].tv_sec, memory->sleep_elapsed_time[i].tv_nsec); } printf("\n");
     printf("points_core: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%d ", core_points[i]); } printf("\n");
+    printf("memory times: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%ld.%ld ", mem_sleep_times[i].tv_sec, mem_sleep_times[i].tv_nsec); } printf("\n");
 
     // Look, I just want this to be 100% sure to be flushed
     fflush(stdout);
@@ -611,6 +613,7 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
 
     free(core_points);
     free(sleep_times);
+    free(mem_sleep_times);
     wall_time = omp_get_wtime() - wall_time;
 
     return success;

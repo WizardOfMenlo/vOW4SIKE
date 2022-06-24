@@ -51,6 +51,7 @@ vow.o \
 swig_helpers.o \
 utils/bintree.o \
 utils/busy_wait.o \
+utils/timespec_ops.o \
 main.o
 OBJXX=$(patsubst %,$(OBJDIRXX)/%,$(_OBJXX))
 

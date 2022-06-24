@@ -71,7 +71,8 @@ LocalMemory<Point, Instance>::LocalMemory(uint64_t _max_entries, Instance *insta
         throw mem_ex;
     }
 
-    sleep_elapsed_time = (struct timespec*) calloc(instance->N_OF_CORES, sizeof(struct timespec));
+    printf("%d\n", instance->N_OF_CORES);
+
     delay.tv_sec = 0;
     delay.tv_nsec = 40 * 1000;
  
@@ -96,13 +97,11 @@ LocalMemory<Point, Instance>::~LocalMemory()
         delete memory[i];
     }
     free(memory);
-    free(sleep_elapsed_time);
 }
 
 template <class Point, class Instance>
-bool LocalMemory<Point, Instance>::send_point(Trip<Point, Instance> *t, uint64_t address, Trip<Point, Instance>* read_ptr)
+bool LocalMemory<Point, Instance>::send_point(Trip<Point, Instance> *t, uint64_t address, Trip<Point, Instance>* read_ptr, struct timespec* sleep_elapsed_time)
 {
-    int t_id = omp_get_thread_num();
     struct timespec start_time, end_time, diff;
     
     clock_gettime(CLOCK_MONOTONIC, &start_time);
@@ -111,7 +110,7 @@ bool LocalMemory<Point, Instance>::send_point(Trip<Point, Instance> *t, uint64_t
     
     diff = diff_timespec(&end_time, &start_time);
     
-    sleep_elapsed_time[t_id] = add_timespec(&sleep_elapsed_time[t_id], &diff);
+    *sleep_elapsed_time = add_timespec(sleep_elapsed_time, &diff);
 
     // Read into the ptr that we have been given
     read_ptr->from_trip(memory[address]);
@@ -125,6 +124,7 @@ bool LocalMemory<Point, Instance>::send_point(Trip<Point, Instance> *t, uint64_t
 template <class Point, class Instance>
 void LocalMemory<Point, Instance>::reset()
 {
+    printf("Resetting mem\n");
     for (uint64_t i = 0; i < max_entries; i++)
     {
         memory[i]->reset();
