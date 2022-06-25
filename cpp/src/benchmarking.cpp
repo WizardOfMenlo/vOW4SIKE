@@ -10,8 +10,7 @@
 template <class Point, class Memory, class RandomFunction, class PRNG, class Instance>
 void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t target_number_of_points, double* cores_calibration)
 {
-#ifdef RUN_ACTUAL_BENCHMARKING
-    double total_time = 0.;
+    double total_tp = 0.;
     double *benchmark;
     vOW<Point, Memory, RandomFunction, PRNG, Instance> benchmark_vow(instance);
 
@@ -50,10 +49,11 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         }
         wall_time = omp_get_wtime() - wall_time;
 
+        double tp = 1 / wall_time;
         // save result
-        benchmark[thread_id] = wall_time;
+        benchmark[thread_id] = tp;
         #pragma omp atomic
-        total_time += wall_time;
+        total_tp += tp;
     }
 
     // printf("benchmark: ");
@@ -69,19 +69,12 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
     #else
     for (uint64_t i = 0; i < instance->N_OF_CORES; i++)
     {
-        points_ratio[i] = benchmark[i] / total_time;
+        points_ratio[i] = benchmark[i] / total_tp;
     }
     #endif
 
     free(benchmark);
 
-#else
-    (void)target_number_of_points;
-    for (uint64_t i = 0; i < instance->N_OF_CORES; i++)
-    {
-        points_ratio[i] = 1. / (double)instance->N_OF_CORES;
-    }
-#endif
     #define WARMUP_ITERS 100000
     #define BENCH_ITERS 10000
 
@@ -91,12 +84,12 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
         int thread_id = omp_get_thread_num();
         // Warmup 
         for (int i = 0; i < WARMUP_ITERS; i++) {
-            busy_wait(MILLION_CYCLES);
+            busy_wait(MILLION_CYCLES * ((thread_id % 2 == 0) ? 1 : 2));
         }
 
         int64_t start = cpu_cycles();
         for (int i = 0; i < BENCH_ITERS; i++) {
-            busy_wait(MILLION_CYCLES);
+            busy_wait(MILLION_CYCLES * ((thread_id % 2 == 0) ? 1 : 2));
         }
         int64_t end = cpu_cycles();
 

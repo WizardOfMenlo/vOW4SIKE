@@ -69,8 +69,15 @@ with open('gen_full_atk_False_hag_False') as f:
         for run_record in exp['v']['full_data']:
             associated_cycles = cycle_data[run_record['salt'] - 1]
             num_steps = run_record['num_steps']
-            avg_cycle_per_step = sum(associated_cycles)/len(associated_cycles)
-            exp_cycles = avg_cycle_per_step * num_steps / ncpus
+            
+            tp = [1/c for c in associated_cycles]
+            total_tp = sum(tp)
+            core_share = [t/total_tp for t in tp]
+            core_points = [num_steps * c for c in core_share]
+            cycles_per_core = [core_points[i] * associated_cycles[i] for i in range(len(core_points))]
+            total_cycles = sum(cycles_per_core)
+
+            exp_cycles = total_cycles / ncpus
             actual_cycles = run_record['cycles']
             r = {
                     'num_steps': num_steps,
