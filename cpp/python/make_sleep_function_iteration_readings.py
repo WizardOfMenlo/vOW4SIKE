@@ -2,7 +2,7 @@ import subprocess
 import json
 import math
 
-experiments = [(20, 10), (22, 14), (26, 16), (28, 18), (30, 20)]
+experiments = [(22, 14), (26, 16), (28, 18), (30, 20)]
 
 # Use all 128 cores
 ncpus = 128 # min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 2
