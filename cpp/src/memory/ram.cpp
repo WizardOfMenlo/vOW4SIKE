@@ -4,6 +4,7 @@
 #include <fstream>
 #include "../utils/memavail.h"
 #include "ram.hpp"
+#include "../utils/busy_wait.hpp"
 
 template <class Point, class Instance>
 LocalMemory<Point, Instance>::LocalMemory(uint64_t _max_entries, Instance *instance)
@@ -94,6 +95,8 @@ LocalMemory<Point, Instance>::~LocalMemory()
 template <class Point, class Instance>
 bool LocalMemory<Point, Instance>::send_point(Trip<Point, Instance> *t, uint64_t address, Trip<Point, Instance>* read_ptr)
 {
+    busy_wait(MILLION_CYCLES / 8);
+
     // Read into the ptr that we have been given
     read_ptr->from_trip(memory[address]);
 

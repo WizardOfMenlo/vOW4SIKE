@@ -512,17 +512,20 @@ bool vOW<Point, Memory, RandomFunction, PRNG, Instance>::run()
     
         // runs cores benchmarks (across remote machines if used) to allocate work
     points_ratio = (double *)calloc(instance->N_OF_CORES, sizeof(double));
-    double* cores_calibration = (double *)calloc(instance->N_OF_CORES, sizeof(double));
-    if (points_ratio == NULL)
+    double* eval_calibration = (double *)calloc(instance->N_OF_CORES, sizeof(double));
+    double* mem_calibration = (double *)calloc(instance->N_OF_CORES, sizeof(double));
+    if (points_ratio == NULL || eval_calibration == NULL || mem_calibration == NULL)
     {
         fprintf(stderr, "error: could not alloc points_ratio memory");
         goto end;
     }
     printf("s_benchmark\n");
-    benchmark(5000, cores_calibration);
+    benchmark(5000, eval_calibration, mem_calibration);
 
-    printf("core benchmark: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%f ", cores_calibration[i]); } printf("\n");
-    free(cores_calibration);
+    printf("step benchmark: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%f ", eval_calibration[i]); } printf("\n");
+    printf("mem benchmark: "); for (int i = 0; i < instance->N_OF_CORES; i++) { printf("%f ", mem_calibration[i]); } printf("\n");
+    free(eval_calibration);
+    free(mem_calibration);
 
     cycles = -cpu_cycles();
     // printf("after benchmark instance->PRNG_SEED = %lu\n", instance->PRNG_SEED);

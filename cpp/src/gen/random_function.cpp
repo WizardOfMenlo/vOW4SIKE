@@ -62,7 +62,7 @@ void GenRandomFunction<Point>::eval(Point &out, Point &in)
     int t_id = omp_get_thread_num();
     // Approximately 1 million cycles
     //int64_t start = cpu_cycles();
-    busy_wait(MILLION_CYCLES * ((t_id % 2 == 0) ? 1 : 2));
+    busy_wait((MILLION_CYCLES/8) * ((t_id % 2 == 0) ? 1 : 2));
     //int64_t end = cpu_cycles();
     //printf("%ld\n", end - start);
     //printf("%f\n", (end - start)/((double) 1000000));

@@ -8,7 +8,7 @@
  * @brief find a number of points and measure how long it takes on the avaliable core
  */
 template <class Point, class Memory, class RandomFunction, class PRNG, class Instance>
-void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t target_number_of_points, double* cores_calibration)
+void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t target_number_of_points, double* eval_calibration, double* mem_calibration)
 {
     double total_tp = 0.;
     double *benchmark;
@@ -82,18 +82,40 @@ void vOW<Point, Memory, RandomFunction, PRNG, Instance>::benchmark(uint64_t targ
     #pragma omp parallel num_threads(instance->N_OF_CORES)
     { 
         int thread_id = omp_get_thread_num();
+        
+        private_state_t<Point, PRNG, RandomFunction, Instance> benchmark_ps(
+            benchmark_vow.instance
+        );
+
         // Warmup 
         for (int i = 0; i < WARMUP_ITERS; i++) {
-            busy_wait(MILLION_CYCLES * ((thread_id % 2 == 0) ? 1 : 2));
+            benchmark_vow.step(benchmark_ps);
         }
 
         int64_t start = cpu_cycles();
         for (int i = 0; i < BENCH_ITERS; i++) {
-            busy_wait(MILLION_CYCLES * ((thread_id % 2 == 0) ? 1 : 2));
+            benchmark_vow.step(benchmark_ps);
         }
         int64_t end = cpu_cycles();
 
-        cores_calibration[thread_id] = ((double) (end - start))/BENCH_ITERS;
+        eval_calibration[thread_id] = ((double) (end - start))/BENCH_ITERS;
+        
+        Trip<Point, Instance> t(benchmark_vow.instance);
+        Trip<Point, Instance> t_1(benchmark_vow.instance);
+
+        // TODO: Make pseudorandom
+        for (int i = 0; i < WARMUP_ITERS; i++) {
+            benchmark_vow.memory->send_point(&t, 0, &t_1);
+        }
+
+        start = cpu_cycles();
+        for (int i = 0; i < BENCH_ITERS; i++) {
+            benchmark_vow.memory->send_point(&t, 0, &t_1);
+        }
+        end = cpu_cycles();
+
+        mem_calibration[thread_id] = ((double) (end - start))/BENCH_ITERS;
+
     }
 }
 

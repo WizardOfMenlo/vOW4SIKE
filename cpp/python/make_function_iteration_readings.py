@@ -6,32 +6,37 @@ import math
 # So that is 10^7 * theta * w cycles / (4 * 10^9 * L) = theta * w / 400 * L seconds
 # Suppose we run on Daisen and take 80 cores. We can run in 5-6h all iterations for w = 2^17
 
-experiments = [ (24, 17) ] # (24, 16) ]
+experiments = [ (24, 16) ]
 
 ncpus = 16 # min(psutil.cpu_count(logical=True), math.floor(psutil.cpu_count(logical=False) * 1.4)) - 1
 
-ITERS = 1
+ITERS = 10
 
 # We have set the cycles for function iterations to be ~ 1 million cycles. 
 # We want to verify that a function iterations that computes that many points incurs in the appropriate slowdown
 
 def predicted_time(log_n, log_w):
-    # Assumes 1million cycles per func iter and 4 Ghz
+    # Assumes 1million cycles / 8 per func iter and 4 Ghz
     inv_theta = 1/(2.25 * math.sqrt(2**(log_w - log_n)))
-    return ITERS * (inv_theta * 10**6 * 10 * 2**log_w / (4 * 10**9 * ncpus)) / 3600
-
-def predicted_cycles(num_steps, calibrated_cycles):
-    return num_steps * calibrated_cycles / ncpus
+    return ITERS * (inv_theta * 10**6 / 8 * 10 * 2**log_w / (4 * 10**9 * ncpus)) / 3600
 
 def parse_cycles(ls: str):
-    readings = []
+    step_readings = []
+    send_point_readings = []
     for l in ls.splitlines():
-        if 'core benchmark' in l:
+        if 'step benchmark' in l:
             l = l.strip()
             cycle_counts = l.split(':')[1].strip().split(' ')
             cycle_counts = [float(s.strip()) for s in cycle_counts]
-            readings.append(cycle_counts)
-    return readings
+            step_readings.append(cycle_counts)
+        elif 'mem benchmark' in l:
+            l = l.strip()
+            cycle_counts = l.split(':')[1].strip().split(' ')
+            cycle_counts = [float(s.strip()) for s in cycle_counts]
+            send_point_readings.append(cycle_counts)
+ 
+
+    return { 'step': step_readings, 'send_point': send_point_readings }
 
 def cycles_backup(n, w, cycles):
     with open('cycles_backup', 'w') as f:
@@ -56,7 +61,6 @@ for n, w in experiments:
    cycles_backup(n, w, cycles_parsed)
    calibrated_cycles[index] = cycles_parsed
    
-   
 aggregated_res = {}
 with open('gen_full_atk_False_hag_False') as f:
     lines = list(f)
@@ -67,16 +71,22 @@ with open('gen_full_atk_False_hag_False') as f:
         cycle_data = calibrated_cycles[index]
         full_record = []
         for run_record in exp['v']['full_data']:
-            associated_cycles = cycle_data[run_record['salt'] - 1]
             num_steps = run_record['num_steps']
+            num_stores = run_record['dist_points']
+
+            step_cycles = cycle_data['step'][run_record['salt'] - 1]
+            send_point_cycles = cycle_data['send_point'][run_record['salt'] - 1] 
             
-            tp = [1/c for c in associated_cycles]
+            tp = [1/c for c in step_cycles]
             total_tp = sum(tp)
             core_share = [t/total_tp for t in tp]
             core_points = [num_steps * c for c in core_share]
-            cycles_per_core = [core_points[i] * associated_cycles[i] for i in range(len(core_points))]
+            stored_points = [num_stores * c for c in core_share]
+            cycles_per_core = [core_points[i] * step_cycles[i] + stored_points[i] * send_point_cycles[i] for i in range(len(core_points))]
             total_cycles = sum(cycles_per_core)
 
+            # Would be more accurate to take max of them tbh but since we are 
+            # allocating in this way meh
             exp_cycles = total_cycles / ncpus
             actual_cycles = run_record['cycles']
             r = {
@@ -89,6 +99,7 @@ with open('gen_full_atk_False_hag_False') as f:
             full_record.append(r)
         record = {'n': n, 'w': w, 'full_data' : full_record }
         aggregated_res[index] = record
+        print(record)
         
 with open('aggregated_function_iterations_readings.json', 'w') as output:
     json.dump(aggregated_res, output)
